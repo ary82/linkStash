@@ -14,6 +14,13 @@ type Server struct {
 	Database *database.DB
 }
 
+func NewApiServer(addr string, database *database.DB) *Server {
+	return &Server{
+		Addr:     addr,
+		Database: database,
+	}
+}
+
 func WriteJsonResponse(w http.ResponseWriter, statusCode int, data any) {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(statusCode)
@@ -25,7 +32,7 @@ func WriteJsonResponse(w http.ResponseWriter, statusCode int, data any) {
 
 func (s *Server) Run() error {
 	router := http.NewServeMux()
-	serve := &http.Server{
+	serverConfig := &http.Server{
 		Addr:    s.Addr,
 		Handler: middleware.Logger(router),
 	}
@@ -34,7 +41,7 @@ func (s *Server) Run() error {
 	router.HandleFunc("GET /stash", s.getStashHandler)
 
 	log.Println("Startin API on", s.Addr)
-	err := serve.ListenAndServe()
+	err := serverConfig.ListenAndServe()
 	return err
 }
 
