@@ -1,3 +1,15 @@
+# BACKEND
 tmp
 bin
 .env
+
+# FRONTEND
+web/node_modules
+web/build
+web/.svelte-kit
+web/package
+web/.env
+web/.env.*
+web/!.env.example
+web/vite.config.js.timestamp-*
+web/vite.config.ts.timestamp-*

@@ -6,8 +6,6 @@ watch:
 	@${HOME}/go/bin/air
 test:
 	go test -v ./...
-ls:
-	@find ./ -type f -not -path '*/.git/*' -not -path '*/bin/*' -not -path '*/tmp/*' -not -name '.*' -not -name 'go*'
 
 # DB Operations
 clearDB:
