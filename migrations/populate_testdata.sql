@@ -1,9 +1,9 @@
 -- Insert some test data
-INSERT INTO users (username, hashedpass)
+INSERT INTO users (username, name, email)
 VALUES
-  ('ary82', 'hashedpass_ary82'),
-  ('test', 'hashedpass_test'),
-  ('demo', 'hashedpass_demo');
+  ('ary82','aryan goyal','ary82@mail.com'),
+  ('test', 'test account', 'test@mail.com'),
+  ('demo', 'demo throwaway', 'demo@mail.com');
 
 INSERT INTO stashes (title, body, owner_id, is_public)
 VALUES
