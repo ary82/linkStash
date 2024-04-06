@@ -6,8 +6,8 @@ import (
 )
 
 type Stash struct {
-	Title      string    `json:"title"`
-	Body       string    `json:"body"`
+	Title      *string   `json:"title"`
+	Body       *string   `json:"body"`
 	Points     int       `json:"points"`
 	Created_at time.Time `json:"created_at"`
 }
