@@ -2,7 +2,7 @@
 CREATE TABLE IF NOT EXISTS "users" (
   "id" serial PRIMARY KEY,
   "email" varchar NOT NULL UNIQUE,
-  "username" varchar NOT NULL,
+  "username" varchar NOT NULL UNIQUE,
   "name" varchar NOT NULL,
   "points" integer NOT NULL DEFAULT 0,
   "picture" varchar,

@@ -21,7 +21,7 @@ type User struct {
 
 // This function takes in the google idtoken payload as the input
 // and inserts user into the database if they don't exist.
-func (database *DB) InsertUserByPayload(payload *idtoken.Payload) error {
+func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
@@ -33,7 +33,8 @@ func (database *DB) InsertUserByPayload(payload *idtoken.Payload) error {
 	insertUserQuery := `
   INSERT INTO users (username, name, email, picture)
   VALUES ($1, $2, $3, $4)
-  ON CONFLICT DO UPDATE
+  ON CONFLICT (email) DO UPDATE SET
+  name=EXCLUDED.name, picture=EXCLUDED.picture
   `
 
 	resp, err := database.Pool.Exec(
@@ -51,13 +52,13 @@ func (database *DB) InsertUserByPayload(payload *idtoken.Payload) error {
 }
 
 // Returns User by email
-func (database *DB) GetUserByEmail(email string) (*User, error) {
+func (database *DB) GetUserByUsername(username string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	getUserQuery := `SELECT * from users WHERE email = $1`
+	getUserQuery := `SELECT * from users WHERE username = $1`
 	user := new(User)
-	row := database.Pool.QueryRow(ctx, getUserQuery, email)
+	row := database.Pool.QueryRow(ctx, getUserQuery, username)
 	err := row.Scan(
 		&user.ID,
 		&user.Email,
