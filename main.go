@@ -2,6 +2,7 @@ package main
 
 import (
 	"log"
+	"os"
 
 	"github.com/ary82/urlStash/api"
 	"github.com/ary82/urlStash/database"
@@ -21,7 +22,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	server := api.NewApiServer(":8080", database)
+	server := api.NewApiServer(os.Getenv("PORT"), database)
 	err = server.Run()
 	if err != nil {
 		log.Fatal(err)
