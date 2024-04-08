@@ -51,6 +51,9 @@
           <p class="m-4">Sign in or Sign up now with Google</p>
           <div class="card-actions">
             <button id="googleSigninButton" />
+            {#if $isAuthenticated === "true"}
+              <a href="/" class="btn btn-primary">You're already logged in</a>
+            {/if}
           </div>
         </div>
       </div>
