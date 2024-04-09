@@ -73,3 +73,13 @@ func (database *DB) GetUserByUsername(username string) (*User, error) {
 	}
 	return user, nil
 }
+
+func (database *DB) CheckUser(email string) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)`
+	err := database.Pool.QueryRow(ctx, query, email).Scan(&exists)
+	return exists, err
+}

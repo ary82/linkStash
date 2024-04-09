@@ -1,15 +1,16 @@
-package api
+package app
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"strings"
 
-	"github.com/ary82/urlStash/database"
-	"github.com/ary82/urlStash/middleware"
+	"github.com/ary82/urlStash/internal/database"
+	"github.com/ary82/urlStash/internal/middleware"
 )
 
 type Server struct {
@@ -47,11 +48,7 @@ func (s *Server) Run() error {
 		Handler: middleware.Logger(router),
 	}
 
-	router.HandleFunc("/", s.NotFound)
-	router.HandleFunc("GET /stash", s.getStashHandler)
-	router.HandleFunc("POST /login", s.LoginHandler)
-	router.Handle("POST /logout", middleware.Auth(http.HandlerFunc(s.LogoutHandler)))
-	router.Handle("GET /private", middleware.Auth(http.HandlerFunc(s.getPrivate)))
+	s.RegisterRoutes(router)
 
 	log.Println("Startin API on", s.Addr)
 	err := serverConfig.ListenAndServe()
@@ -92,6 +89,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJsonErr(w, err)
 		return
 	}
+  fmt.Println(payload.Claims)
 
 	// Insert or Update User from Google's information
 	err = s.Database.UpsertUserByPayload(payload)
@@ -127,7 +125,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 	stashes, err := s.Database.GetPublicStashes()
 	if err != nil {
-		WriteJsonResponse(w, http.StatusInternalServerError, map[string]string{"error": err.Error()})
+		WriteJsonErr(w, err)
 		return
 	}
 	WriteJsonResponse(w, http.StatusOK, stashes)
