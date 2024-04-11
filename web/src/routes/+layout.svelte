@@ -37,8 +37,8 @@
   }
 </script>
 
-<div class="relative z-[1]">
-  <div class="fixed navbar bg-base-100">
+<div class="sticky top-0 z-[1]">
+  <div class="navbar bg-base-100">
     <div class="navbar-start">
       <div class="dropdown">
         <div tabindex="0" role="button" class="btn btn-ghost lg:hidden">
