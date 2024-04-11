@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/ary82/urlStash/internal/database"
@@ -89,7 +90,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		WriteJsonErr(w, err)
 		return
 	}
-  fmt.Println(payload.Claims)
+	fmt.Println(payload.Claims)
 
 	// Insert or Update User from Google's information
 	err = s.Database.UpsertUserByPayload(payload)
@@ -122,13 +123,28 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getPublicStashHandler(w http.ResponseWriter, r *http.Request) {
 	stashes, err := s.Database.GetPublicStashes()
 	if err != nil {
 		WriteJsonErr(w, err)
 		return
 	}
 	WriteJsonResponse(w, http.StatusOK, stashes)
+}
+
+func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
+	pathStr := r.PathValue("id")
+	pathInt, err := strconv.Atoi(pathStr)
+	if err != nil {
+		WriteJsonResponse(w, http.StatusBadRequest, map[string]string{"error": "can't convert path to int"})
+		return
+	}
+	stash, err := s.Database.GetStash(pathInt)
+	if err != nil {
+		WriteJsonErr(w, err)
+		return
+	}
+	WriteJsonResponse(w, http.StatusOK, stash)
 }
 
 func (s *Server) getPrivate(w http.ResponseWriter, r *http.Request) {

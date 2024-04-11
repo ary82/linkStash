@@ -33,7 +33,8 @@ func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
 	insertUserQuery := `
   INSERT INTO users (username, name, email, picture)
   VALUES ($1, $2, $3, $4)
-  ON CONFLICT (email) DO UPDATE SET
+  ON CONFLICT (email)
+  DO UPDATE SET
   name=EXCLUDED.name, picture=EXCLUDED.picture
   `
 
@@ -79,7 +80,10 @@ func (database *DB) CheckUser(email string) (bool, error) {
 	defer cancel()
 
 	var exists bool
-	query := `SELECT EXISTS(SELECT 1 FROM users WHERE email = $1)`
+	query := `SELECT EXISTS (
+    SELECT 1 FROM users
+    WHERE email = $1)
+    `
 	err := database.Pool.QueryRow(ctx, query, email).Scan(&exists)
 	return exists, err
 }
