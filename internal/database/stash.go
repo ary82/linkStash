@@ -8,6 +8,7 @@ import (
 type Stash struct {
 	ID         int       `json:"id"`
 	Author     *string   `json:"author"`
+	AuthorId   int       `json:"author_id"`
 	Title      *string   `json:"title"`
 	Body       *string   `json:"body"`
 	Stars      int       `json:"stars"`
@@ -17,6 +18,7 @@ type Stash struct {
 type StashDetail struct {
 	ID         int        `json:"id"`
 	Author     *string    `json:"author"`
+	AuthorId   int        `json:"author_id"`
 	Title      *string    `json:"title"`
 	Body       *string    `json:"body"`
 	Stars      int        `json:"stars"`
@@ -31,7 +33,8 @@ func (database *DB) GetPublicStashes() ([]*Stash, error) {
 	defer cancel()
 
 	query := `
-  SELECT username, title, body, stashes.id, stashes.created_at,
+  SELECT username, users.id, title, body,
+  stashes.id, stashes.created_at,
   (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
   FROM stashes INNER JOIN users
   ON stashes.owner_id = users.id
@@ -48,6 +51,7 @@ func (database *DB) GetPublicStashes() ([]*Stash, error) {
 		stash := new(Stash)
 		err := rows.Scan(
 			&stash.Author,
+			&stash.AuthorId,
 			&stash.Title,
 			&stash.Body,
 			&stash.ID,
@@ -70,7 +74,8 @@ func (database *DB) GetStashesByUser(username string) ([]*Stash, error) {
 	defer cancel()
 
 	query := `
-  SELECT username, title, body, stashes.id, stashes.created_at,
+  SELECT username, users.id, title, body,
+  stashes.id, stashes.created_at,
   (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
   FROM stashes INNER JOIN users
   ON stashes.owner_id = users.id
@@ -87,6 +92,7 @@ func (database *DB) GetStashesByUser(username string) ([]*Stash, error) {
 		stash := new(Stash)
 		err := rows.Scan(
 			&stash.Author,
+			&stash.AuthorId,
 			&stash.Title,
 			&stash.Body,
 			&stash.ID,
@@ -104,14 +110,14 @@ func (database *DB) GetStashesByUser(username string) ([]*Stash, error) {
 	return stashArr, nil
 }
 
-
-func (database *DB) GetStash(id int) (*StashDetail, error) {
+func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
 	// Populate Stash details
 	stashQuery := `
-  SELECT username, title, body, stashes.id, stashes.created_at, stashes.is_public,
+  SELECT username, users.id, title, body,
+  stashes.id, stashes.created_at, stashes.is_public,
   (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
   FROM stashes INNER JOIN users
   ON stashes.owner_id = users.id
@@ -121,6 +127,7 @@ func (database *DB) GetStash(id int) (*StashDetail, error) {
 	stash := new(StashDetail)
 	err := database.Pool.QueryRow(ctx, stashQuery, id).Scan(
 		&stash.Author,
+		&stash.AuthorId,
 		&stash.Title,
 		&stash.Body,
 		&stash.ID,
@@ -134,7 +141,7 @@ func (database *DB) GetStash(id int) (*StashDetail, error) {
 
 	// Populate Links
 	linksQuery := `
-  SELECT url, comment FROM links
+  SELECT id, url, comment FROM links
   WHERE stash_id = $1
   `
 	rows, err := database.Pool.Query(ctx, linksQuery, id)
@@ -145,6 +152,7 @@ func (database *DB) GetStash(id int) (*StashDetail, error) {
 	for rows.Next() {
 		link := new(Link)
 		err := rows.Scan(
+			&link.ID,
 			&link.Url,
 			&link.Comment,
 		)
@@ -159,7 +167,9 @@ func (database *DB) GetStash(id int) (*StashDetail, error) {
 
 	// Populate comments
 	commentsQuery := `
-  SELECT author, body, created_at FROM comments
+  SELECT comments.id, users.id, username, body, comments.created_at
+  FROM comments INNER JOIN users
+  ON comments.author = users.id
   WHERE stash_id = $1
   `
 	rows, err = database.Pool.Query(ctx, commentsQuery, id)
@@ -170,6 +180,8 @@ func (database *DB) GetStash(id int) (*StashDetail, error) {
 	for rows.Next() {
 		comment := new(Comment)
 		err := rows.Scan(
+			&comment.ID,
+			&comment.AuthorId,
 			&comment.Author,
 			&comment.Body,
 			&comment.CreatedAt,

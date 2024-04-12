@@ -12,7 +12,7 @@ import (
 type User struct {
 	ID            int       `json:"id"`
 	Username      *string   `json:"username"`
-	Points        int       `json:"points"`
+	Stars         int       `json:"stars"`
 	Picture       *string   `json:"picture"`
 	Created_at    time.Time `json:"created_at"`
 	PublicStashes []*Stash  `json:"public_stashes"`
@@ -73,7 +73,7 @@ func (database *DB) GetUserProfile(id int) (*User, error) {
 	err := row.Scan(
 		&user.ID,
 		&user.Username,
-		&user.Points,
+		&user.Stars,
 		&user.Picture,
 		&user.Created_at,
 	)
@@ -83,7 +83,8 @@ func (database *DB) GetUserProfile(id int) (*User, error) {
 
 	// Populate user's public stashes
 	getStashQuery := `
-  SELECT username, title, body, stashes.id, stashes.created_at,
+  SELECT username, users.id, title, body,
+  stashes.id, stashes.created_at,
   (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
   FROM stashes INNER JOIN users
   ON stashes.owner_id = users.id
@@ -99,6 +100,7 @@ func (database *DB) GetUserProfile(id int) (*User, error) {
 		stash := new(Stash)
 		err := rows.Scan(
 			&stash.Author,
+			&stash.AuthorId,
 			&stash.Title,
 			&stash.Body,
 			&stash.ID,

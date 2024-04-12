@@ -133,16 +133,6 @@ func (s *Server) getPublicStashesHandler(w http.ResponseWriter, r *http.Request)
 	WriteJsonResponse(w, http.StatusOK, stashes)
 }
 
-func (s *Server) getUserStashesHandler(w http.ResponseWriter, r *http.Request) {
-	pathStr := r.PathValue("user")
-	stashes, err := s.Database.GetStashesByUser(pathStr)
-	if err != nil {
-		WriteJsonErr(w, err)
-		return
-	}
-	WriteJsonResponse(w, http.StatusOK, stashes)
-}
-
 func (s *Server) getUserHandler(w http.ResponseWriter, r *http.Request) {
 	pathStr := r.PathValue("id")
 	pathInt, err := strconv.Atoi(pathStr)
@@ -174,7 +164,7 @@ func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 		)
 		return
 	}
-	stash, err := s.Database.GetStash(pathInt)
+	stash, err := s.Database.GetStashDetailed(pathInt)
 	if err != nil {
 		WriteJsonErr(w, err)
 		return
