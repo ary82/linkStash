@@ -1,23 +1,20 @@
-package middleware
+package auth
 
 import (
 	"context"
 	"fmt"
 	"net/http"
 	"os"
-	"time"
 
 	"github.com/golang-jwt/jwt/v5"
-	"google.golang.org/api/idtoken"
 )
 
-type ContextKey string
-
-func Auth(next http.Handler) http.HandlerFunc {
+func AuthMiddleware(next http.Handler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get the cookie
 		cookie, err := r.Cookie("urlstashJwt")
 		if err != nil {
+			fmt.Println("terminating here")
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 			return
 		}
@@ -50,28 +47,4 @@ func Auth(next http.Handler) http.HandlerFunc {
 			http.Error(w, err.Error(), http.StatusUnauthorized)
 		}
 	}
-}
-
-func GenerateJWT(username string) (string, error) {
-	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Issuer:    os.Getenv("ISSUER"),
-		Subject:   username,
-	}
-
-	key := []byte(os.Getenv("JWT_SECRET"))
-
-	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-	ss, err := token.SignedString(key)
-	return ss, err
-}
-
-// Function for getting payload from google identity's jwt
-func GetData(tokenStr []byte) (*idtoken.Payload, error) {
-	payload, err := idtoken.Validate(context.Background(), string(tokenStr), os.Getenv("AUDIENCE"))
-	if err != nil {
-		return nil, err
-	}
-	return payload, nil
 }
