@@ -10,8 +10,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/ary82/urlStash/internal/auth"
 	"github.com/ary82/urlStash/internal/database"
-	"github.com/ary82/urlStash/internal/middleware"
+	"github.com/ary82/urlStash/internal/logging"
 )
 
 type Server struct {
@@ -46,7 +47,7 @@ func (s *Server) Run() error {
 	router := http.NewServeMux()
 	serverConfig := &http.Server{
 		Addr:    s.Addr,
-		Handler: middleware.Logger(router),
+		Handler: logging.LoggerMiddleware(router),
 	}
 
 	s.RegisterRoutes(router)
@@ -61,7 +62,7 @@ func (s *Server) NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Context().Value(middleware.ContextKey("username")))
+	log.Println(r.Context().Value(auth.ContextKey("username")))
 	cookie := &http.Cookie{
 		Name:     "urlstashJwt",
 		Value:    "",
@@ -85,7 +86,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	defer r.Body.Close()
 
 	// Get the token Payload from Google idToken JWT
-	payload, err := middleware.GetData(tokenStr)
+	payload, err := auth.GetData(tokenStr)
 	if err != nil {
 		WriteJsonErr(w, err)
 		return
@@ -99,7 +100,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, err := middleware.GenerateJWT(strings.Split(payload.Claims["email"].(string), "@")[0])
+	jwt, err := auth.GenerateJWT(strings.Split(payload.Claims["email"].(string), "@")[0])
 	if err != nil {
 		WriteJsonErr(w, err)
 		return
@@ -123,7 +124,7 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func (s *Server) getPublicStashHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) getPublicStashesHandler(w http.ResponseWriter, r *http.Request) {
 	stashes, err := s.Database.GetPublicStashes()
 	if err != nil {
 		WriteJsonErr(w, err)
@@ -132,11 +133,45 @@ func (s *Server) getPublicStashHandler(w http.ResponseWriter, r *http.Request) {
 	WriteJsonResponse(w, http.StatusOK, stashes)
 }
 
+func (s *Server) getUserStashesHandler(w http.ResponseWriter, r *http.Request) {
+	pathStr := r.PathValue("user")
+	stashes, err := s.Database.GetStashesByUser(pathStr)
+	if err != nil {
+		WriteJsonErr(w, err)
+		return
+	}
+	WriteJsonResponse(w, http.StatusOK, stashes)
+}
+
+func (s *Server) getUserHandler(w http.ResponseWriter, r *http.Request) {
+	pathStr := r.PathValue("id")
+	pathInt, err := strconv.Atoi(pathStr)
+	if err != nil {
+		WriteJsonResponse(
+			w,
+			http.StatusBadRequest,
+			map[string]string{"error": "can't convert path to int"},
+		)
+		return
+	}
+	user, err := s.Database.GetUserProfile(pathInt)
+	if err != nil {
+		WriteJsonErr(w, err)
+		return
+	}
+	WriteJsonResponse(w, http.StatusOK, user)
+
+}
+
 func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 	pathStr := r.PathValue("id")
 	pathInt, err := strconv.Atoi(pathStr)
 	if err != nil {
-		WriteJsonResponse(w, http.StatusBadRequest, map[string]string{"error": "can't convert path to int"})
+		WriteJsonResponse(
+			w,
+			http.StatusBadRequest,
+			map[string]string{"error": "can't convert path to int"},
+		)
 		return
 	}
 	stash, err := s.Database.GetStash(pathInt)

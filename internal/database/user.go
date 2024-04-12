@@ -10,13 +10,12 @@ import (
 )
 
 type User struct {
-	ID         int       `json:"id"`
-	Email      *string   `json:"email"`
-	Username   *string   `json:"username"`
-	Name       *string   `json:"name"`
-	Points     int       `json:"points"`
-	Picture    *string   `json:"picture"`
-	Created_at time.Time `json:"created_at"`
+	ID            int       `json:"id"`
+	Username      *string   `json:"username"`
+	Points        int       `json:"points"`
+	Picture       *string   `json:"picture"`
+	Created_at    time.Time `json:"created_at"`
+	PublicStashes []*Stash  `json:"public_stashes"`
 }
 
 // This function takes in the google idtoken payload as the input
@@ -53,24 +52,66 @@ func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
 }
 
 // Returns User by email
-func (database *DB) GetUserByUsername(username string) (*User, error) {
+func (database *DB) GetUserProfile(id int) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
-	getUserQuery := `SELECT * from users WHERE username = $1`
+	// Populate user's info
+	getUserQuery := `
+  SELECT id, username, (
+    SELECT COUNT(1)
+    FROM stashes INNER JOIN stars
+    ON stashes.id = stars.stash_id
+    WHERE stashes.owner_id = $1
+  ), picture, created_at
+  FROM users WHERE id = $1
+  `
+
 	user := new(User)
-	row := database.Pool.QueryRow(ctx, getUserQuery, username)
+
+	row := database.Pool.QueryRow(ctx, getUserQuery, id)
 	err := row.Scan(
 		&user.ID,
-		&user.Email,
 		&user.Username,
-		&user.Name,
 		&user.Points,
 		&user.Picture,
 		&user.Created_at,
 	)
 	if err != nil {
 		return nil, err
+	}
+
+	// Populate user's public stashes
+	getStashQuery := `
+  SELECT username, title, body, stashes.id, stashes.created_at,
+  (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
+  FROM stashes INNER JOIN users
+  ON stashes.owner_id = users.id
+  WHERE stashes.is_public = true AND stashes.owner_id = $1
+  `
+	rows, err := database.Pool.Query(ctx, getStashQuery, id)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		stash := new(Stash)
+		err := rows.Scan(
+			&stash.Author,
+			&stash.Title,
+			&stash.Body,
+			&stash.ID,
+			&stash.Created_at,
+			&stash.Stars,
+		)
+		if err != nil {
+			return nil, err
+		}
+		user.PublicStashes = append(user.PublicStashes, stash)
+	}
+	if rows.Err() != nil {
+		return nil, rows.Err()
 	}
 	return user, nil
 }
