@@ -64,47 +64,6 @@ func (database *DB) GetPublicStashes() ([]*Stash, error) {
 	return stashArr, nil
 }
 
-func (database *DB) GetStashesByUser(username string) ([]*Stash, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	query := `
-  SELECT username, users.id, title, body,
-  stashes.id, stashes.created_at,
-  (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
-  FROM stashes INNER JOIN users
-  ON stashes.owner_id = users.id
-  WHERE users.username = $1
-  `
-	rows, err := database.Pool.Query(ctx, query, username)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	stashArr := []*Stash{}
-	for rows.Next() {
-		stash := new(Stash)
-		err := rows.Scan(
-			&stash.Author,
-			&stash.AuthorId,
-			&stash.Title,
-			&stash.Body,
-			&stash.ID,
-			&stash.Created_at,
-			&stash.Stars,
-		)
-		if err != nil {
-			return nil, err
-		}
-		stashArr = append(stashArr, stash)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
-	return stashArr, nil
-}
-
 func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()

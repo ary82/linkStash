@@ -1,17 +1,15 @@
 package app
 
 import (
-	"encoding/json"
-	"fmt"
 	"io"
 	"log"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/ary82/urlStash/internal/auth"
 	"github.com/ary82/urlStash/internal/database"
 	"github.com/ary82/urlStash/internal/logging"
+	"github.com/ary82/urlStash/internal/utils"
 )
 
 type Server struct {
@@ -24,22 +22,6 @@ func NewApiServer(addr string, database *database.DB) *Server {
 		Addr:     addr,
 		Database: database,
 	}
-}
-
-func WriteJsonResponse(w http.ResponseWriter, statusCode int, data any) {
-	w.Header().Add("Content-Type", "application/json")
-	if os.Getenv("MODE") == "DEV" {
-		w.Header().Add("Access-Control-Allow-Origin", os.Getenv("CLIENT_URL"))
-		w.Header().Add("Access-Control-Allow-Credentials", "true")
-	}
-	w.WriteHeader(statusCode)
-	err := json.NewEncoder(w).Encode(data)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-}
-func WriteJsonErr(w http.ResponseWriter, err error) {
-	WriteJsonResponse(w, http.StatusInternalServerError, map[string]string{"err": err.Error()})
 }
 
 func (s *Server) Run() error {
@@ -56,62 +38,68 @@ func (s *Server) Run() error {
 	return err
 }
 
-func (s *Server) NotFound(w http.ResponseWriter, r *http.Request) {
-	WriteJsonResponse(w, http.StatusNotFound, map[string]string{"error": "not a valid api path"})
+func (s *Server) notFoundHandler(w http.ResponseWriter, r *http.Request) {
+	utils.WriteJsonResponse(
+		w,
+		http.StatusNotFound,
+		map[string]string{"error": "not a valid api path"},
+	)
 }
 
-func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	cookie := &http.Cookie{
-		Name:     "urlstashJwt",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-
-	http.SetCookie(w, cookie)
-	WriteJsonResponse(w, http.StatusOK, map[string]string{"message": "logged out"})
+func (s *Server) logoutHandler(w http.ResponseWriter, r *http.Request) {
+	auth.ClearJwtCookie(w)
+	utils.WriteJsonResponse(
+		w,
+		http.StatusOK,
+		map[string]string{"message": "logged out"},
+	)
 }
 
-func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
+func (s *Server) loginHandler(w http.ResponseWriter, r *http.Request) {
 	tokenStr, err := io.ReadAll(r.Body)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
 	defer r.Body.Close()
 
 	// Get the token Payload from Google idToken JWT
-	payload, err := auth.GetData(tokenStr)
+	payload, err := auth.GetPayload(tokenStr)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
-	fmt.Println(payload.Claims)
+
+	// Extract useful data form payload
+	data := auth.GetData(payload)
 
 	// Insert or Update User from Google's information
-	err = s.Database.UpsertUserByPayload(payload)
+	err = s.Database.UpsertUser(
+		data.Username,
+		data.Name,
+		data.Email,
+		data.Picture,
+	)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
 
 	// Get the upserted User
-	user, err := s.Database.GetUserByEmail(payload.Claims["email"].(string))
+	user, err := s.Database.GetUserByEmail(data.Email)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
 
-	// Generate the jwt with claims set as userId and email
-	jwt, err := auth.GenerateJWT(user.ID, payload.Claims["email"].(string))
+	// Generate the urlStash jwt with claims set as userId and email
+	jwt, err := auth.GenerateJWT(user.ID, data.Email)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
 
+	// Serve the jwt as cookie
 	cookie := &http.Cookie{
 		Name:     "urlstashJwt",
 		Value:    jwt,
@@ -123,19 +111,9 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	http.SetCookie(w, cookie)
 
-	// Also return the picture in response
-	WriteJsonResponse(w, http.StatusOK, map[string]string{
+	utils.WriteJsonResponse(w, http.StatusOK, map[string]string{
 		"message": "Successfully logged in",
 	})
-}
-
-func (s *Server) getPublicStashesHandler(w http.ResponseWriter, r *http.Request) {
-	stashes, err := s.Database.GetPublicStashes()
-	if err != nil {
-		WriteJsonErr(w, err)
-		return
-	}
-	WriteJsonResponse(w, http.StatusOK, stashes)
 }
 
 func (s *Server) getUserHandler(w http.ResponseWriter, r *http.Request) {
@@ -144,17 +122,17 @@ func (s *Server) getUserHandler(w http.ResponseWriter, r *http.Request) {
 
 	user, err := s.Database.GetUserByEmail(email)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
-	WriteJsonResponse(w, http.StatusOK, user)
+	utils.WriteJsonResponse(w, http.StatusOK, user)
 }
 
 func (s *Server) getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 	pathStr := r.PathValue("id")
 	pathInt, err := strconv.Atoi(pathStr)
 	if err != nil {
-		WriteJsonResponse(
+		utils.WriteJsonResponse(
 			w,
 			http.StatusBadRequest,
 			map[string]string{"error": "can't convert path to int"},
@@ -163,18 +141,27 @@ func (s *Server) getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	user, err := s.Database.GetUserProfile(pathInt)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
-	WriteJsonResponse(w, http.StatusOK, user)
+	utils.WriteJsonResponse(w, http.StatusOK, user)
 
+}
+
+func (s *Server) getPublicStashesHandler(w http.ResponseWriter, r *http.Request) {
+	stashes, err := s.Database.GetPublicStashes()
+	if err != nil {
+		utils.WriteJsonServerErr(w, err)
+		return
+	}
+	utils.WriteJsonResponse(w, http.StatusOK, stashes)
 }
 
 func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 	pathStr := r.PathValue("id")
 	pathInt, err := strconv.Atoi(pathStr)
 	if err != nil {
-		WriteJsonResponse(
+		utils.WriteJsonResponse(
 			w,
 			http.StatusBadRequest,
 			map[string]string{"error": "can't convert path to int"},
@@ -183,12 +170,14 @@ func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	stash, err := s.Database.GetStashDetailed(pathInt)
 	if err != nil {
-		WriteJsonErr(w, err)
+		utils.WriteJsonServerErr(w, err)
 		return
 	}
-	WriteJsonResponse(w, http.StatusOK, stash)
+	utils.WriteJsonResponse(w, http.StatusOK, stash)
 }
 
+// Only for testing auth routes
+// TODO: delete this
 func (s *Server) getPrivate(w http.ResponseWriter, r *http.Request) {
-	WriteJsonResponse(w, http.StatusOK, map[string]string{"message": "private path accessed"})
+	utils.WriteJsonResponse(w, http.StatusOK, map[string]string{"message": "private path accessed"})
 }

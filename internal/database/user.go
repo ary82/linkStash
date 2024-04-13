@@ -3,21 +3,18 @@ package database
 import (
 	"context"
 	"log"
-	"strings"
 	"time"
-
-	"google.golang.org/api/idtoken"
 )
 
 type User struct {
 	ID       int     `json:"id"`
-	Username string `json:"username"`
+	Username string  `json:"username"`
 	Picture  *string `json:"picture"`
 }
 
 type UserDetail struct {
-  // Embed User
-  User
+	// Embed User
+	User
 	Stars         int       `json:"stars"`
 	Created_at    time.Time `json:"created_at"`
 	PublicStashes []*Stash  `json:"public_stashes"`
@@ -45,14 +42,15 @@ func (database *DB) GetUserByEmail(email string) (*User, error) {
 
 // This function takes in the google idtoken payload as the input
 // and inserts user into the database if they don't exist.
-func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
+func (database *DB) UpsertUser(
+	username string,
+	name string,
+	email string,
+	pictue string,
+) error {
 
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
-
-	// Get username from email
-	email := payload.Claims["email"].(string)
-	username := strings.Split(email, "@")[0]
 
 	insertUserQuery := `
   INSERT INTO users (username, name, email, picture)
@@ -66,8 +64,9 @@ func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
 		ctx,
 		insertUserQuery,
 		username,
-		payload.Claims["name"].(string),
-		email, payload.Claims["picture"].(string),
+		name,
+		email,
+		pictue,
 	)
 	if err != nil {
 		return err

@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/ary82/urlStash/internal/utils"
 	"github.com/golang-jwt/jwt/v5"
 )
 
@@ -14,26 +15,30 @@ func AuthMiddleware(next http.Handler) http.HandlerFunc {
 		// Get the cookie
 		cookie, err := r.Cookie("urlstashJwt")
 		if err != nil {
-			fmt.Println("terminating here")
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			ClearJwtCookie(w)
+			utils.WriteJsonUnauthorized(w, err)
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(cookie.Value, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
-			// Validate the algorithm
-			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-			}
+		token, err := jwt.ParseWithClaims(
+			cookie.Value,
+			&CustomClaims{},
+			func(token *jwt.Token) (interface{}, error) {
+				// Validate the algorithm
+				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+				}
 
-			return []byte(os.Getenv("JWT_SECRET")), nil
-		})
+				return []byte(os.Getenv("JWT_SECRET")), nil
+			},
+		)
 
 		if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
 
 			// Get email from claims
 			email, err := claims.GetSubject()
 			if err != nil {
-				http.Error(w, err.Error(), http.StatusUnauthorized)
+				utils.WriteJsonServerErr(w, err)
 				return
 			}
 
@@ -51,7 +56,8 @@ func AuthMiddleware(next http.Handler) http.HandlerFunc {
 			// Serve the next handler
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
-			http.Error(w, err.Error(), http.StatusUnauthorized)
+			ClearJwtCookie(w)
+			utils.WriteJsonUnauthorized(w, err)
 		}
 	}
 }
