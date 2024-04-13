@@ -9,7 +9,6 @@ export const load: PageLoad = async ({ fetch, params }: any) => {
       throw new Error(`HTTP error: ${response.status}`);
     }
     const user = (await response.json()) as userDetail;
-    console.log(user);
     return { user };
   } catch (error) {
     console.error(error);

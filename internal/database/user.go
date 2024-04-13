@@ -16,10 +16,9 @@ type User struct {
 }
 
 type UserDetail struct {
-	ID            int       `json:"id"`
-	Username      string   `json:"username"`
+  // Embed User
+  User
 	Stars         int       `json:"stars"`
-	Picture       *string   `json:"picture"`
 	Created_at    time.Time `json:"created_at"`
 	PublicStashes []*Stash  `json:"public_stashes"`
 }

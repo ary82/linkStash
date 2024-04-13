@@ -9,7 +9,6 @@ export const load: PageLoad = async ({ fetch, params }: any) => {
       throw new Error(`HTTP error: ${response.status}`);
     }
     const stash = (await response.json()) as stashDetail;
-    console.log(stash);
     return { stash };
   } catch (error) {
     console.error(error);

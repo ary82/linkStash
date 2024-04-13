@@ -7,25 +7,20 @@ import (
 
 type Stash struct {
 	ID         int       `json:"id"`
-	Author     *string   `json:"author"`
+	Author     string    `json:"author"`
 	AuthorId   int       `json:"author_id"`
-	Title      *string   `json:"title"`
-	Body       *string   `json:"body"`
+	Title      string    `json:"title"`
+	Body       *string   `json:"body"` // Optional(Can be nil)
 	Stars      int       `json:"stars"`
 	Created_at time.Time `json:"created_at"`
 }
 
 type StashDetail struct {
-	ID         int        `json:"id"`
-	Author     *string    `json:"author"`
-	AuthorId   int        `json:"author_id"`
-	Title      *string    `json:"title"`
-	Body       *string    `json:"body"`
-	Stars      int        `json:"stars"`
-	IsPublic   bool       `json:"is_public"`
-	Created_at time.Time  `json:"created_at"`
-	Links      []*Link    `json:"links"`
-	Comments   []*Comment `json:"comments"`
+	// Embed Stash
+	Stash
+	IsPublic bool       `json:"is_public"`
+	Links    []*Link    `json:"links"`
+	Comments []*Comment `json:"comments"`
 }
 
 func (database *DB) GetPublicStashes() ([]*Stash, error) {
