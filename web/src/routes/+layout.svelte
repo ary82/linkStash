@@ -1,6 +1,6 @@
 <script lang="ts">
   import "../app.css";
-  import { isAuthenticated, storedTheme, storedPicture } from "$lib/store";
+  import { isAuthenticated, storedTheme } from "$lib/store";
   import { goto } from "$app/navigation";
 
   // Import icons
@@ -9,6 +9,8 @@
   import Mail from "$lib/icons/Mail.svelte";
   import Linkedin from "$lib/icons/Linkdein.svelte";
   import Archive from "$lib/icons/Archive.svelte";
+
+  export let data;
 
   let checkboxVal: boolean = $storedTheme === "dark";
   $: {
@@ -21,16 +23,14 @@
 
   // Function for logging out
   // Server deletes jwt token cookie
-  async function Logout() {
+  async function Logout(): Promise<void> {
     const res = await fetch(`${import.meta.env.VITE_BACKEND_URL}/logout`, {
       method: "POST",
-      credentials: "include",
     });
 
     const json = await res.json();
     if (res.ok) {
       isAuthenticated.set("false");
-      storedPicture.set("");
     }
     console.log(json);
     goto("/");
@@ -83,14 +83,16 @@
             class="btn btn-ghost btn-circle avatar"
           >
             <div class="w-10 rounded-full">
-              <img alt="your google profile" src={$storedPicture} />
+              <img alt="your google profile" src={data.user.picture} />
             </div>
           </div>
           <ul
             class="menu dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52"
           >
             <li>
-              <a href="/" class="justify-between"> Profile </a>
+              <a href="/user/{data.user.id}" class="justify-between">
+                Profile
+              </a>
             </li>
             <li><a href="/">Settings</a></li>
             <li><button on:click={Logout}>Logout</button></li>

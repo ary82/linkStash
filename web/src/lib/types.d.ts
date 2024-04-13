@@ -38,6 +38,12 @@ type comment = {
 type user = {
   id: number;
   username: string;
+  picture: string;
+}
+
+type userDetail = {
+  id: number;
+  username: string;
   stars: number;
   picture: string;
   created_at: string;

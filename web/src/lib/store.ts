@@ -11,8 +11,3 @@ export const storedTheme = writable(browser && localStorage.getItem("theme") || 
 storedTheme.subscribe((val) => {
   if (browser) return (localStorage.setItem("theme", val === "dark" ? "dark" : "light"))
 })
-
-export const storedPicture = writable(browser && localStorage.getItem("picture") || "")
-storedPicture.subscribe((val) => {
-  if (browser) return (localStorage.setItem("picture", val))
-})

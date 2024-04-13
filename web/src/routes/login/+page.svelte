@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { isAuthenticated, storedPicture } from "$lib/store";
+  import { isAuthenticated } from "$lib/store";
   import { onMount } from "svelte";
 
   // Function for logging in
@@ -13,10 +13,8 @@
       body: googleRespone.credential,
     });
 
-    const json = await res.json();
     if (res.ok) {
       isAuthenticated.set("true");
-      storedPicture.set(json.picture);
       goto("/");
     }
   }

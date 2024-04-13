@@ -8,7 +8,7 @@ export const load: PageLoad = async ({ fetch, params }: any) => {
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
-    const user = (await response.json()) as user;
+    const user = (await response.json()) as userDetail;
     console.log(user);
     return { user };
   } catch (error) {
