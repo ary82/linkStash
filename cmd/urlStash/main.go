@@ -17,7 +17,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	dbConnStr := "postgres://ary:123@localhost:5431/urlStash"
+	dbConnStr := os.Getenv("DB_CONN")
 	database, err := database.NewDB(dbConnStr)
 	if err != nil {
 		log.Fatal(err)
