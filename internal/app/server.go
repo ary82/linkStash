@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 
 	"github.com/ary82/urlStash/internal/auth"
 	"github.com/ary82/urlStash/internal/database"
@@ -62,7 +61,6 @@ func (s *Server) NotFound(w http.ResponseWriter, r *http.Request) {
 }
 
 func (s *Server) LogoutHandler(w http.ResponseWriter, r *http.Request) {
-	log.Println(r.Context().Value(auth.ContextKey("username")))
 	cookie := &http.Cookie{
 		Name:     "urlstashJwt",
 		Value:    "",
@@ -100,7 +98,15 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	jwt, err := auth.GenerateJWT(strings.Split(payload.Claims["email"].(string), "@")[0])
+	// Get the upserted User
+	user, err := s.Database.GetUserByEmail(payload.Claims["email"].(string))
+	if err != nil {
+		WriteJsonErr(w, err)
+		return
+	}
+
+	// Generate the jwt with claims set as userId and email
+	jwt, err := auth.GenerateJWT(user.ID, payload.Claims["email"].(string))
 	if err != nil {
 		WriteJsonErr(w, err)
 		return
@@ -120,7 +126,6 @@ func (s *Server) LoginHandler(w http.ResponseWriter, r *http.Request) {
 	// Also return the picture in response
 	WriteJsonResponse(w, http.StatusOK, map[string]string{
 		"message": "Successfully logged in",
-		"picture": payload.Claims["picture"].(string),
 	})
 }
 
@@ -134,6 +139,18 @@ func (s *Server) getPublicStashesHandler(w http.ResponseWriter, r *http.Request)
 }
 
 func (s *Server) getUserHandler(w http.ResponseWriter, r *http.Request) {
+	// Get email from suth context
+	email := r.Context().Value(auth.ContextKey("user")).(*auth.ContextVal).Email
+
+	user, err := s.Database.GetUserByEmail(email)
+	if err != nil {
+		WriteJsonErr(w, err)
+		return
+	}
+	WriteJsonResponse(w, http.StatusOK, user)
+}
+
+func (s *Server) getUserProfileHandler(w http.ResponseWriter, r *http.Request) {
 	pathStr := r.PathValue("id")
 	pathInt, err := strconv.Atoi(pathStr)
 	if err != nil {

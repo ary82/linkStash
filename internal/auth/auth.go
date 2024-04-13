@@ -11,12 +11,25 @@ import (
 
 type ContextKey string
 
-func GenerateJWT(username string) (string, error) {
-	claims := &jwt.RegisteredClaims{
-		ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
-		IssuedAt:  jwt.NewNumericDate(time.Now()),
-		Issuer:    os.Getenv("ISSUER"),
-		Subject:   username,
+type ContextVal struct {
+	UserId int
+	Email  string
+}
+
+type CustomClaims struct {
+	UserId int `json:"uid"`
+	jwt.RegisteredClaims
+}
+
+func GenerateJWT(UserId int, email string) (string, error) {
+	claims := &CustomClaims{
+		UserId,
+		jwt.RegisteredClaims{
+			ExpiresAt: jwt.NewNumericDate(time.Now().Add(24 * time.Hour)),
+			IssuedAt:  jwt.NewNumericDate(time.Now()),
+			Issuer:    os.Getenv("ISSUER"),
+			Subject:   email,
+		},
 	}
 
 	key := []byte(os.Getenv("JWT_SECRET"))

@@ -10,12 +10,38 @@ import (
 )
 
 type User struct {
+	ID       int     `json:"id"`
+	Username string `json:"username"`
+	Picture  *string `json:"picture"`
+}
+
+type UserDetail struct {
 	ID            int       `json:"id"`
-	Username      *string   `json:"username"`
+	Username      string   `json:"username"`
 	Stars         int       `json:"stars"`
 	Picture       *string   `json:"picture"`
 	Created_at    time.Time `json:"created_at"`
 	PublicStashes []*Stash  `json:"public_stashes"`
+}
+
+func (database *DB) GetUserByEmail(email string) (*User, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+	query := `
+  SELECT id, username, picture 
+  FROM users 
+  WHERE email = $1
+  `
+	user := new(User)
+	err := database.Pool.QueryRow(ctx, query, email).Scan(
+		&user.ID,
+		&user.Username,
+		&user.Picture,
+	)
+	if err != nil {
+		return nil, err
+	}
+	return user, nil
 }
 
 // This function takes in the google idtoken payload as the input
@@ -52,7 +78,7 @@ func (database *DB) UpsertUserByPayload(payload *idtoken.Payload) error {
 }
 
 // Returns User by email
-func (database *DB) GetUserProfile(id int) (*User, error) {
+func (database *DB) GetUserProfile(id int) (*UserDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -67,7 +93,7 @@ func (database *DB) GetUserProfile(id int) (*User, error) {
   FROM users WHERE id = $1
   `
 
-	user := new(User)
+	user := new(UserDetail)
 
 	row := database.Pool.QueryRow(ctx, getUserQuery, id)
 	err := row.Scan(
@@ -116,17 +142,4 @@ func (database *DB) GetUserProfile(id int) (*User, error) {
 		return nil, rows.Err()
 	}
 	return user, nil
-}
-
-func (database *DB) CheckUser(email string) (bool, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
-	defer cancel()
-
-	var exists bool
-	query := `SELECT EXISTS (
-    SELECT 1 FROM users
-    WHERE email = $1)
-    `
-	err := database.Pool.QueryRow(ctx, query, email).Scan(&exists)
-	return exists, err
 }

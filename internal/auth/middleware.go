@@ -19,27 +19,34 @@ func AuthMiddleware(next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.Parse(cookie.Value, func(token *jwt.Token) (interface{}, error) {
+		token, err := jwt.ParseWithClaims(cookie.Value, &CustomClaims{}, func(token *jwt.Token) (interface{}, error) {
 			// Validate the algorithm
 			if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 				return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
 			}
+
 			return []byte(os.Getenv("JWT_SECRET")), nil
 		})
 
-		if claims, ok := token.Claims.(jwt.MapClaims); ok && token.Valid {
-			// Get subject from claims
-			subject, err := claims.GetSubject()
+		if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
+
+			// Get email from claims
+			email, err := claims.GetSubject()
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusUnauthorized)
 				return
 			}
 
+			// User struct for use in context
+			contextVal := &ContextVal{
+				UserId: claims.UserId,
+				Email:  email,
+			}
+
 			// Put the claims in the request's context
-			// Can get by r.Context().Value(ctxKey).(jwt.MapClaims) if putting claim
-			// Or simply by r.Context().Value(ctxKey) if simple value like string
-			ctxKey := ContextKey("username")
-			ctx := context.WithValue(r.Context(), ctxKey, subject)
+			// Can get by r.Context().Value(ctxKey).(TYPE ASSERTION)
+			ctxKey := ContextKey("user")
+			ctx := context.WithValue(r.Context(), ctxKey, contextVal)
 
 			// Serve the next handler
 			next.ServeHTTP(w, r.WithContext(ctx))
