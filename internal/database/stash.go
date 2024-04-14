@@ -23,6 +23,39 @@ type StashDetail struct {
 	Comments []*Comment `json:"comments"`
 }
 
+func (database *DB) CheckStashPublic(id int) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	query := `
+  SELECT is_public FROM stashes
+  WHERE id = $1
+  `
+	var isPublic bool
+	err := database.Pool.QueryRow(ctx, query, id).Scan(&isPublic)
+	return isPublic, err
+}
+
+func (database *DB) CheckOwner(userId int, stashId int) (bool, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	query := `
+  SELECT owner_id FROM stashes
+  WHERE id = $1
+  `
+	// Initialize as -1 to avoid zero case
+	ownerId := -1
+	err := database.Pool.QueryRow(ctx, query, stashId).Scan(&ownerId)
+	if err != nil {
+		return false, err
+	}
+	if ownerId == userId {
+		return true, nil
+	}
+	return false, nil
+}
+
 func (database *DB) GetPublicStashes() ([]*Stash, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
