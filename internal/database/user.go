@@ -76,7 +76,7 @@ func (pg *Postgres) UpsertUser(
 }
 
 // Returns User by email
-func (pg *Postgres) GetUserProfile(id int) (*UserDetail, error) {
+func (pg *Postgres) GetUserProfile(userId int) (*UserDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -93,7 +93,7 @@ func (pg *Postgres) GetUserProfile(id int) (*UserDetail, error) {
 
 	user := new(UserDetail)
 
-	row := pg.Pool.QueryRow(ctx, getUserQuery, id)
+	row := pg.Pool.QueryRow(ctx, getUserQuery, userId)
 	err := row.Scan(
 		&user.ID,
 		&user.Username,
@@ -106,38 +106,10 @@ func (pg *Postgres) GetUserProfile(id int) (*UserDetail, error) {
 	}
 
 	// Populate user's public stashes
-	getStashQuery := `
-  SELECT username, users.id, title, body,
-  stashes.id, stashes.created_at,
-  (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
-  FROM stashes INNER JOIN users
-  ON stashes.owner_id = users.id
-  WHERE stashes.is_public = true AND stashes.owner_id = $1
-  `
-	rows, err := pg.Pool.Query(ctx, getStashQuery, id)
+	user.PublicStashes, err = pg.GetPublicStashesUser(userId)
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
 
-	for rows.Next() {
-		stash := new(Stash)
-		err := rows.Scan(
-			&stash.Author,
-			&stash.AuthorId,
-			&stash.Title,
-			&stash.Body,
-			&stash.ID,
-			&stash.Created_at,
-			&stash.Stars,
-		)
-		if err != nil {
-			return nil, err
-		}
-		user.PublicStashes = append(user.PublicStashes, stash)
-	}
-	if rows.Err() != nil {
-		return nil, rows.Err()
-	}
 	return user, nil
 }

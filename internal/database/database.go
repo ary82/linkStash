@@ -8,15 +8,22 @@ import (
 
 type DB interface {
 	// Stash operations
-	CheckOwner(userId int, stashId int) (bool, error)
-	CheckStashPublic(id int) (bool, error)
 	GetPublicStashes() ([]*Stash, error)
-	GetStashDetailed(id int) (*StashDetail, error)
+	GetPublicStashesUser(userId int) ([]*Stash, error)
+	GetStashDetailed(stashId int) (*StashDetail, error)
+	CheckOwner(userId int, stashId int) (bool, error)
+	CheckStashPublic(stashId int) (bool, error)
 
 	//User operations
 	GetUserByEmail(email string) (*User, error)
-	GetUserProfile(id int) (*UserDetail, error)
+	GetUserProfile(userId int) (*UserDetail, error)
 	UpsertUser(username string, name string, email string, pictue string) error
+
+	// Comment operations
+	GetComments(stashId int) ([]*Comment, error)
+
+	//Link operations
+	GetLinks(stashId int) ([]*Link, error)
 }
 
 type Postgres struct {
