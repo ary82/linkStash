@@ -14,10 +14,10 @@ import (
 
 type Server struct {
 	Addr     string
-	Database *database.DB
+	Database database.DB
 }
 
-func NewApiServer(addr string, database *database.DB) *Server {
+func NewApiServer(addr string, database database.DB) *Server {
 	return &Server{
 		Addr:     addr,
 		Database: database,

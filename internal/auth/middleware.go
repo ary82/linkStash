@@ -73,7 +73,7 @@ func AuthMiddleware(optional bool, next http.Handler) http.HandlerFunc {
 // Authz middleware that allows access either if user owns this stash,
 // or the stash is public. Takes in stash from the url path.
 func AuthzStash(
-	database *database.DB,
+	database database.DB,
 	next http.Handler,
 ) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {

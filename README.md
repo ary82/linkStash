@@ -95,7 +95,7 @@ pnpm run build
 - Code
 
   - [ ] Complete basic functionality
-  - [ ] Decouple Database logic completely using an adapter/port pattern
+  - [x] Decouple Database logic completely, pass behaviour instead
   - [ ] Add More Tests
   - [ ] Make middleware more readable
 

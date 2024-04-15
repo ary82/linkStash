@@ -20,7 +20,7 @@ type UserDetail struct {
 	PublicStashes []*Stash  `json:"public_stashes"`
 }
 
-func (database *DB) GetUserByEmail(email string) (*User, error) {
+func (pg *Postgres) GetUserByEmail(email string) (*User, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 	query := `
@@ -29,7 +29,7 @@ func (database *DB) GetUserByEmail(email string) (*User, error) {
   WHERE email = $1
   `
 	user := new(User)
-	err := database.Pool.QueryRow(ctx, query, email).Scan(
+	err := pg.Pool.QueryRow(ctx, query, email).Scan(
 		&user.ID,
 		&user.Username,
 		&user.Picture,
@@ -42,7 +42,7 @@ func (database *DB) GetUserByEmail(email string) (*User, error) {
 
 // This function takes in the google idtoken payload as the input
 // and inserts user into the database if they don't exist.
-func (database *DB) UpsertUser(
+func (pg *Postgres) UpsertUser(
 	username string,
 	name string,
 	email string,
@@ -60,7 +60,7 @@ func (database *DB) UpsertUser(
   name=EXCLUDED.name, picture=EXCLUDED.picture
   `
 
-	resp, err := database.Pool.Exec(
+	resp, err := pg.Pool.Exec(
 		ctx,
 		insertUserQuery,
 		username,
@@ -76,7 +76,7 @@ func (database *DB) UpsertUser(
 }
 
 // Returns User by email
-func (database *DB) GetUserProfile(id int) (*UserDetail, error) {
+func (pg *Postgres) GetUserProfile(id int) (*UserDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -93,7 +93,7 @@ func (database *DB) GetUserProfile(id int) (*UserDetail, error) {
 
 	user := new(UserDetail)
 
-	row := database.Pool.QueryRow(ctx, getUserQuery, id)
+	row := pg.Pool.QueryRow(ctx, getUserQuery, id)
 	err := row.Scan(
 		&user.ID,
 		&user.Username,
@@ -114,7 +114,7 @@ func (database *DB) GetUserProfile(id int) (*UserDetail, error) {
   ON stashes.owner_id = users.id
   WHERE stashes.is_public = true AND stashes.owner_id = $1
   `
-	rows, err := database.Pool.Query(ctx, getStashQuery, id)
+	rows, err := pg.Pool.Query(ctx, getStashQuery, id)
 	if err != nil {
 		return nil, err
 	}

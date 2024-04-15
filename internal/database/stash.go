@@ -23,7 +23,7 @@ type StashDetail struct {
 	Comments []*Comment `json:"comments"`
 }
 
-func (database *DB) CheckStashPublic(id int) (bool, error) {
+func (pg *Postgres) CheckStashPublic(id int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -32,11 +32,11 @@ func (database *DB) CheckStashPublic(id int) (bool, error) {
   WHERE id = $1
   `
 	var isPublic bool
-	err := database.Pool.QueryRow(ctx, query, id).Scan(&isPublic)
+	err := pg.Pool.QueryRow(ctx, query, id).Scan(&isPublic)
 	return isPublic, err
 }
 
-func (database *DB) CheckOwner(userId int, stashId int) (bool, error) {
+func (pg *Postgres) CheckOwner(userId int, stashId int) (bool, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -46,7 +46,7 @@ func (database *DB) CheckOwner(userId int, stashId int) (bool, error) {
   `
 	// Initialize as -1 to avoid zero case
 	ownerId := -1
-	err := database.Pool.QueryRow(ctx, query, stashId).Scan(&ownerId)
+	err := pg.Pool.QueryRow(ctx, query, stashId).Scan(&ownerId)
 	if err != nil {
 		return false, err
 	}
@@ -56,7 +56,7 @@ func (database *DB) CheckOwner(userId int, stashId int) (bool, error) {
 	return false, nil
 }
 
-func (database *DB) GetPublicStashes() ([]*Stash, error) {
+func (pg *Postgres) GetPublicStashes() ([]*Stash, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -68,7 +68,7 @@ func (database *DB) GetPublicStashes() ([]*Stash, error) {
   ON stashes.owner_id = users.id
   WHERE stashes.is_public = true
   `
-	rows, err := database.Pool.Query(ctx, query)
+	rows, err := pg.Pool.Query(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (database *DB) GetPublicStashes() ([]*Stash, error) {
 	return stashArr, nil
 }
 
-func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
+func (pg *Postgres) GetStashDetailed(id int) (*StashDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()
 
@@ -112,7 +112,7 @@ func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
   `
 
 	stash := new(StashDetail)
-	err := database.Pool.QueryRow(ctx, stashQuery, id).Scan(
+	err := pg.Pool.QueryRow(ctx, stashQuery, id).Scan(
 		&stash.Author,
 		&stash.AuthorId,
 		&stash.Title,
@@ -131,7 +131,7 @@ func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
   SELECT id, url, comment FROM links
   WHERE stash_id = $1
   `
-	rows, err := database.Pool.Query(ctx, linksQuery, id)
+	rows, err := pg.Pool.Query(ctx, linksQuery, id)
 	if err != nil {
 		return nil, err
 	}
@@ -159,7 +159,7 @@ func (database *DB) GetStashDetailed(id int) (*StashDetail, error) {
   ON comments.author = users.id
   WHERE stash_id = $1
   `
-	rows, err = database.Pool.Query(ctx, commentsQuery, id)
+	rows, err = pg.Pool.Query(ctx, commentsQuery, id)
 	if err != nil {
 		return nil, err
 	}

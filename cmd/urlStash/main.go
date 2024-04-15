@@ -18,7 +18,7 @@ func main() {
 	}
 
 	dbConnStr := os.Getenv("DB_CONN")
-	database, err := database.NewDB(dbConnStr)
+	database, err := database.NewPostgresDB(dbConnStr)
 	if err != nil {
 		log.Fatal(err)
 	}

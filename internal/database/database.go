@@ -6,11 +6,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type DB struct {
+type DB interface {
+	// Stash operations
+	CheckOwner(userId int, stashId int) (bool, error)
+	CheckStashPublic(id int) (bool, error)
+	GetPublicStashes() ([]*Stash, error)
+	GetStashDetailed(id int) (*StashDetail, error)
+
+	//User operations
+	GetUserByEmail(email string) (*User, error)
+	GetUserProfile(id int) (*UserDetail, error)
+	UpsertUser(username string, name string, email string, pictue string) error
+}
+
+type Postgres struct {
 	Pool *pgxpool.Pool
 }
 
-func NewDB(connStr string) (*DB, error) {
+// Takes in a connection string and returns a DB interface,
+// which is a pointer to the Postgres Database
+func NewPostgresDB(connStr string) (DB, error) {
 	pool, err := pgxpool.New(context.Background(), connStr)
 	if err != nil {
 		return nil, err
@@ -19,5 +34,5 @@ func NewDB(connStr string) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &DB{Pool: pool}, nil
+	return &Postgres{Pool: pool}, nil
 }
