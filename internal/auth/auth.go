@@ -2,11 +2,11 @@ package auth
 
 import (
 	"context"
-	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/ary82/urlStash/internal/database"
 	"github.com/golang-jwt/jwt/v5"
 	"google.golang.org/api/idtoken"
 )
@@ -32,6 +32,43 @@ type ContextVal struct {
 	Email  string
 }
 
+func Login(tokenStr []byte, db database.DB) (*string, error) {
+
+	// Get the token Payload from Google idToken JWT
+	payload, err := GetPayload(tokenStr)
+	if err != nil {
+		return nil, err
+	}
+
+	// Extract useful data form payload
+	data := GetData(payload)
+
+	// Insert or Update User from Google's information
+	err = db.UpsertUser(
+		data.Username,
+		data.Name,
+		data.Email,
+		data.Picture,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get the upserted User
+	user, err := db.GetUserByEmail(data.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Generate the urlStash jwt with claims set as userId and email
+	jwt, err := GenerateJWT(user.ID, data.Email)
+	if err != nil {
+		return nil, err
+	}
+	return &jwt, nil
+}
+
+// Generate Jwt to be used for urlstash
 func GenerateJWT(UserId int, email string) (string, error) {
 	claims := &CustomClaims{
 		UserId,
@@ -73,18 +110,4 @@ func GetData(p *idtoken.Payload) *GoogleData {
 		Name:     p.Claims["name"].(string),
 		Picture:  p.Claims["picture"].(string),
 	}
-}
-
-// Clears the login jwt cookiw from client
-func ClearJwtCookie(w http.ResponseWriter) {
-	cookie := &http.Cookie{
-		Name:     "urlstashJwt",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		Secure:   true,
-		SameSite: http.SameSiteLaxMode,
-	}
-	http.SetCookie(w, cookie)
 }

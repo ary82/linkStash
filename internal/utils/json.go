@@ -34,3 +34,11 @@ func WriteJsonUnauthorized(w http.ResponseWriter, err error) {
 		map[string]string{"error": err.Error()},
 	)
 }
+
+func WriteJsonBadReq(w http.ResponseWriter, err error) {
+	WriteJsonResponse(
+		w,
+		http.StatusBadRequest,
+		map[string]string{"error": err.Error()},
+	)
+}

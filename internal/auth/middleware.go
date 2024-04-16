@@ -18,7 +18,7 @@ func AuthMiddleware(optional bool, next http.Handler) http.HandlerFunc {
 		// Get the cookie
 		cookie, err := r.Cookie("urlstashJwt")
 		if err != nil {
-			ClearJwtCookie(w)
+			utils.ClearJwtCookie(w, "urlstashJwt")
 			// If Auth is optional for this route, serve next
 			if optional {
 				next.ServeHTTP(w, r)
@@ -64,7 +64,7 @@ func AuthMiddleware(optional bool, next http.Handler) http.HandlerFunc {
 			// Serve the next handler
 			next.ServeHTTP(w, r.WithContext(ctx))
 		} else {
-			ClearJwtCookie(w)
+			utils.ClearJwtCookie(w, "urlstashJwt")
 			utils.WriteJsonUnauthorized(w, err)
 		}
 	}
@@ -92,7 +92,7 @@ func AuthzStash(
 		// Get current user from context
 		currentUser, ok := r.Context().Value(ContextKey("user")).(*ContextVal)
 
-    // check if currentUser is owner
+		// check if currentUser is owner
 		var isOwner bool
 		if currentUser != nil && ok {
 			owner, err := database.CheckOwner(currentUser.UserId, stashId)
@@ -103,7 +103,7 @@ func AuthzStash(
 			}
 		}
 
-    // check if stash is public
+		// check if stash is public
 		isPublic, err := database.CheckStashPublic(stashId)
 		if err != nil {
 			utils.WriteJsonServerErr(w, err)
