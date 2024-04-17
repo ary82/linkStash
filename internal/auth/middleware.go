@@ -4,12 +4,10 @@ import (
 	"context"
 	"fmt"
 	"net/http"
-	"os"
 	"strconv"
 
 	"github.com/ary82/urlStash/internal/database"
 	"github.com/ary82/urlStash/internal/utils"
-	"github.com/golang-jwt/jwt/v5"
 )
 
 // Authn middleware
@@ -28,45 +26,26 @@ func AuthMiddleware(optional bool, next http.Handler) http.HandlerFunc {
 			return
 		}
 
-		token, err := jwt.ParseWithClaims(
-			cookie.Value,
-			&CustomClaims{},
-			func(token *jwt.Token) (interface{}, error) {
-				// Validate the algorithm
-				if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
-					return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
-				}
-
-				return []byte(os.Getenv("JWT_SECRET")), nil
-			},
-		)
-
-		if claims, ok := token.Claims.(*CustomClaims); ok && token.Valid {
-
-			// Get email from claims
-			email, err := claims.GetSubject()
-			if err != nil {
-				utils.WriteJsonServerErr(w, err)
-				return
-			}
-
-			// User struct for use in context
-			contextVal := &ContextVal{
-				UserId: claims.UserId,
-				Email:  email,
-			}
-
-			// Put the claims in the request's context
-			// Can get by r.Context().Value(ctxKey).(TYPE ASSERTION)
-			ctxKey := ContextKey("user")
-			ctx := context.WithValue(r.Context(), ctxKey, contextVal)
-
-			// Serve the next handler
-			next.ServeHTTP(w, r.WithContext(ctx))
-		} else {
+		// Get a struct with email, userid from jwt
+		contextVal, err := ParseJWT(cookie.Value)
+		if err != nil {
 			utils.ClearJwtCookie(w, "urlstashJwt")
-			utils.WriteJsonUnauthorized(w, err)
+			// If Auth is optional for this route, serve next
+			if optional {
+				next.ServeHTTP(w, r)
+			} else {
+				utils.WriteJsonUnauthorized(w, err)
+			}
+			return
 		}
+
+		// Put the claims in the request's context
+		// Can get by r.Context().Value(ctxKey).(TYPE ASSERTION)
+		ctxKey := ContextKey("user")
+		ctx := context.WithValue(r.Context(), ctxKey, contextVal)
+
+		// Serve the next handler
+		next.ServeHTTP(w, r.WithContext(ctx))
 	}
 }
 
