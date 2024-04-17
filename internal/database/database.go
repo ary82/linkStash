@@ -10,6 +10,7 @@ type DB interface {
 	// Stash operations
 	GetPublicStashes() ([]*Stash, error)
 	GetPublicStashesUser(userId int) ([]*Stash, error)
+	GetUserStashes(userId int) ([]*Stash, error)
 	GetStashDetailed(stashId int) (*StashDetail, error)
 	CheckOwner(userId int, stashId int) (bool, error)
 	CheckStashPublic(stashId int) (bool, error)

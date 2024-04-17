@@ -50,4 +50,13 @@ func (s *Server) RegisterRoutes(router *http.ServeMux) {
 			http.HandlerFunc(s.getUserHandler),
 		),
 	)
+
+	// Get all User's stashes
+	router.Handle(
+		"GET /my-stashes",
+		auth.AuthMiddleware(
+			false,
+			http.HandlerFunc(s.getUserStashHandler),
+		),
+	)
 }

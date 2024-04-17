@@ -108,6 +108,50 @@ func (pg *Postgres) GetPublicStashesUser(userId int) ([]*Stash, error) {
 	return stashArr, nil
 }
 
+func (pg *Postgres) GetUserStashes(userId int) ([]*Stash, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
+	defer cancel()
+
+	getStashQuery := `
+  SELECT username, users.id, title, body,
+  stashes.id, stashes.created_at,
+  (SELECT count(1) FROM stars WHERE stashes.id = stars.stash_id)
+  FROM stashes INNER JOIN users
+  ON stashes.owner_id = users.id
+  WHERE stashes.owner_id = $1
+  `
+	rows, err := pg.Pool.Query(ctx, getStashQuery, userId)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	stashArr := []*Stash{}
+
+	for rows.Next() {
+		stash := new(Stash)
+		err := rows.Scan(
+			&stash.Author,
+			&stash.AuthorId,
+			&stash.Title,
+			&stash.Body,
+			&stash.ID,
+			&stash.Created_at,
+			&stash.Stars,
+		)
+		if err != nil {
+			return nil, err
+		}
+		stashArr = append(stashArr, stash)
+	}
+
+	if rows.Err() != nil {
+		return nil, rows.Err()
+	}
+
+	return stashArr, nil
+}
+
 func (pg *Postgres) GetStashDetailed(stashId int) (*StashDetail, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 200*time.Millisecond)
 	defer cancel()

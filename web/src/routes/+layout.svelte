@@ -50,7 +50,7 @@
           <li><a href="/">Home</a></li>
           <li><a href="/browse">Browse</a></li>
           {#if $isAuthenticated === "true"}
-            <li><a href="/stashes">Stashes</a></li>
+            <li><a href="/my-stashes">My Stashes</a></li>
           {/if}
         </ul>
       </div>
@@ -63,7 +63,7 @@
         <li><a href="/">Home</a></li>
         <li><a href="/browse">Browse</a></li>
         {#if $isAuthenticated === "true"}
-          <li><a href="/stashes">Stashes</a></li>
+          <li><a href="/my-stashes">My Stashes</a></li>
         {/if}
       </ul>
     </div>

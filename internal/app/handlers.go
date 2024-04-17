@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"net/http"
 	"strconv"
@@ -97,6 +98,23 @@ func (s *Server) getStashHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	utils.WriteJsonResponse(w, http.StatusOK, stash)
+}
+
+func (s *Server) getUserStashHandler(w http.ResponseWriter, r *http.Request) {
+
+	// Get current user from context
+	currentUser, ok := r.Context().Value(auth.ContextKey("user")).(*auth.ContextVal)
+	if !ok {
+		utils.WriteJsonUnauthorized(w, fmt.Errorf("Cannot get user details"))
+		return
+	}
+
+	stashes, err := s.Database.GetUserStashes(currentUser.UserId)
+	if err != nil {
+		utils.WriteJsonServerErr(w, err)
+		return
+	}
+	utils.WriteJsonResponse(w, http.StatusOK, stashes)
 }
 
 // Only for testing auth routes

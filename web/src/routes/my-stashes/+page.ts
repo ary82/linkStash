@@ -1,9 +1,9 @@
 import type { PageLoad } from "./$types";
 
-export const load: PageLoad = async ({ fetch, params }: any) => {
+export const load: PageLoad = async ({ fetch }: any) => {
   try {
     const response = await fetch(
-      `${import.meta.env.VITE_BACKEND_URL}/stash/${params.id}`,
+      `${import.meta.env.VITE_BACKEND_URL}/my-stashes`,
       {
         credentials: "include",
       },
@@ -11,8 +11,8 @@ export const load: PageLoad = async ({ fetch, params }: any) => {
     if (!response.ok) {
       throw new Error(`HTTP error: ${response.status}`);
     }
-    const stash = (await response.json()) as stashDetail;
-    return { stash };
+    const stashes = (await response.json()) as stash[];
+    return { stashes };
   } catch (error) {
     console.error(error);
     throw new Error(`Unable to fetch`);
