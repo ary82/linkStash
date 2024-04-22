@@ -6,7 +6,7 @@ export const load: LayoutLoad = async ({ fetch }: any) => {
       credentials: "include",
     });
     if (!response.ok) {
-      throw new Error(`HTTP error: ${response.status}`);
+      // throw new Error(`HTTP error: ${response.status}`);
     }
     const user = (await response.json()) as user;
     return { user };
